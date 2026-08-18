@@ -17,10 +17,6 @@ export async function GET(
   try {
     const user = await getCurrentUser();
 
-    // --------------------------------------------
-    // AUTHENTICATION
-    // --------------------------------------------
-
     if (!user) {
       return NextResponse.json(
         {
@@ -31,11 +27,6 @@ export async function GET(
         }
       );
     }
-
-    // --------------------------------------------
-    // AUTHORIZATION
-    // Reviewer detail endpoint for now
-    // --------------------------------------------
 
     if (user.role !== "REVIEWER") {
       return NextResponse.json(
@@ -52,7 +43,7 @@ export async function GET(
     const { id } = await params;
 
     // --------------------------------------------
-    // CHECK ACCESS FIRST
+    // CHECK THAT INTAKE EXISTS + ACCESS
     // --------------------------------------------
 
     const accessCheck =
@@ -70,8 +61,7 @@ export async function GET(
     if (!accessCheck) {
       return NextResponse.json(
         {
-          error:
-            "Application not found",
+          error: "Application not found",
         },
         {
           status: 404,
@@ -79,8 +69,11 @@ export async function GET(
       );
     }
 
-    // If it is assigned, only the assigned
-    // reviewer may view it.
+    // An unassigned intake can be viewed
+    // by any reviewer.
+    //
+    // An assigned intake can only be viewed
+    // by its assigned reviewer.
     if (
       accessCheck.reviewerId &&
       accessCheck.reviewerId !== user.id
@@ -97,11 +90,10 @@ export async function GET(
     }
 
     // --------------------------------------------
-    // VIEW TYPE
+    // DETERMINE VIEW MODE
     // --------------------------------------------
 
-    const url =
-      new URL(request.url);
+    const url = new URL(request.url);
 
     const privileged =
       url.searchParams.get(
@@ -109,7 +101,7 @@ export async function GET(
       ) === "true";
 
     // --------------------------------------------
-    // AUDIT PRIVILEGED ACCESS
+    // AUDIT PRIVILEGED PII ACCESS
     // --------------------------------------------
 
     if (privileged) {
@@ -129,7 +121,7 @@ export async function GET(
     }
 
     // --------------------------------------------
-    // LOAD DETAILS
+    // LOAD INTAKE + AUDIT HISTORY
     // --------------------------------------------
 
     const intake =
@@ -153,14 +145,29 @@ export async function GET(
               name: true,
             },
           },
+
+          auditLogs: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  role: true,
+                },
+              },
+            },
+
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
         },
       });
 
     if (!intake) {
       return NextResponse.json(
         {
-          error:
-            "Application not found",
+          error: "Application not found",
         },
         {
           status: 404,
@@ -168,20 +175,11 @@ export async function GET(
       );
     }
 
-    // --------------------------------------------
-    // PRIVILEGED
-    // Full PII
-    // --------------------------------------------
-
     if (privileged) {
       return NextResponse.json(
         intake
       );
     }
-
-    // --------------------------------------------
-    // SIMPLE / REDACTED
-    // --------------------------------------------
 
     return NextResponse.json(
       redactIntake(intake)

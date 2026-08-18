@@ -8,6 +8,8 @@ import {
 
 import { useRouter } from "next/navigation";
 
+import AuditLog from "@/components/AuditLog";
+
 interface Intake {
   id: string;
 
@@ -35,6 +37,21 @@ interface Intake {
   submittedBy: {
     id: string;
     name: string;
+  };
+
+  auditLogs: AuditEntry[];
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  details: string | null;
+  createdAt: string;
+
+  user: {
+    id: string;
+    name: string;
+    role: string;
   };
 }
 
@@ -679,6 +696,17 @@ export default function IntakeDetail({
               </button>
             </div>
           )}
+      </section>
+      
+      {/* ----------------------------------------
+          AUDIT LOG
+         ---------------------------------------- */}
+      <section style={cardStyle}>
+        <AuditLog
+          entries={
+            intake.auditLogs
+          }
+        />
       </section>
     </div>
   );
