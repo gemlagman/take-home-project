@@ -90,9 +90,43 @@ export default function PatientIntake() {
       }
     }, []);
 
-  useEffect(() => {
-    loadIntakes();
-  }, [loadIntakes]);
+    useEffect(() => {
+    async function initialLoad() {
+        try {
+        const response = await fetch(
+            "/api/intakes",
+            {
+            cache: "no-store",
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            setError(
+            data.error ??
+                "Unable to load applications"
+            );
+            return;
+        }
+
+        setIntakes(data);
+        } catch (error) {
+        console.error(
+            "Failed to load patient intakes:",
+            error
+        );
+
+        setError(
+            "Unable to load your applications."
+        );
+        } finally {
+        setLoading(false);
+        }
+    }
+
+    initialLoad();
+    }, []);
 
   async function handleCreated() {
     setShowForm(false);

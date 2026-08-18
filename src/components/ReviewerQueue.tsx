@@ -100,12 +100,56 @@ export default function ReviewerQueue() {
       [router]
     );
 
-  useEffect(() => {
-    loadQueue(activeQueue);
-  }, [
+    useEffect(() => {
+    async function initialLoad() {
+        try {
+        const response = await fetch(
+            `/api/intakes?queue=${activeQueue}`,
+            {
+            cache: "no-store",
+            }
+        );
+
+        if (response.status === 401) {
+            router.push("/login");
+            return;
+        }
+
+        if (response.status === 403) {
+            router.push("/intake");
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            setError(
+            data.error ??
+                "Unable to load queue"
+            );
+            return;
+        }
+
+        setIntakes(data);
+        } catch (error) {
+        console.error(
+            "Failed to load queue:",
+            error
+        );
+
+        setError(
+            "Unable to load applications."
+        );
+        } finally {
+        setLoading(false);
+        }
+    }
+
+    initialLoad();
+    }, [
     activeQueue,
-    loadQueue,
-  ]);
+    router,
+    ]);
 
   function changeQueue(
     queue: QueueType
