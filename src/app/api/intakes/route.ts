@@ -3,11 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
 
-    // User must be logged in
     if (!user) {
       return NextResponse.json(
         {
@@ -44,45 +43,78 @@ export async function GET() {
 
     // --------------------------------------------------
     // REVIEWER
-    // Return active, claimable/owned applications
     // --------------------------------------------------
 
-    if (user.role === "REVIEWER") {
+    if (user.role !== "REVIEWER") {
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const url = new URL(request.url);
+
+    const queue =
+      url.searchParams.get("queue") ?? "open";
+
+    // --------------------------------------------------
+    // OPEN QUEUE
+    //
+    // Any reviewer can see:
+    // - PENDING
+    // - unassigned
+    // --------------------------------------------------
+
+    if (queue === "open") {
       const intakes = await prisma.intake.findMany({
         where: {
-          AND: [
-            {
-              OR: [
-                {
-                  reviewerId: null,
-                },
-                {
-                  reviewerId: user.id,
-                },
-              ],
-            },
-
-            {
-              status: {
-                in: [
-                  "PENDING",
-                  "IN_REVIEW",
-                ],
-              },
-            },
-          ],
+          status: "PENDING",
+          reviewerId: null,
         },
 
         select: {
           id: true,
-
           clientName: true,
           clientEmail: true,
-
           description: true,
-
           status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
 
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      return NextResponse.json(intakes);
+    }
+
+    // --------------------------------------------------
+    // ASSIGNED QUEUE
+    //
+    // Reviewer can only see:
+    // - IN_REVIEW
+    // - assigned to themselves
+    // --------------------------------------------------
+
+    if (queue === "assigned") {
+      const intakes = await prisma.intake.findMany({
+        where: {
+          status: "IN_REVIEW",
+          reviewerId: user.id,
+        },
+
+        select: {
+          id: true,
+          clientName: true,
+          clientEmail: true,
+          description: true,
+          status: true,
           createdAt: true,
           updatedAt: true,
 
@@ -95,7 +127,53 @@ export async function GET() {
         },
 
         orderBy: {
-          createdAt: "desc",
+          updatedAt: "desc",
+        },
+      });
+
+      return NextResponse.json(intakes);
+    }
+
+    // --------------------------------------------------
+    // COMPLETED QUEUE
+    //
+    // Reviewer can only see:
+    // - assigned to themselves
+    // - APPROVED or REJECTED
+    // --------------------------------------------------
+
+    if (queue === "completed") {
+      const intakes = await prisma.intake.findMany({
+        where: {
+          reviewerId: user.id,
+
+          status: {
+            in: [
+              "APPROVED",
+              "REJECTED",
+            ],
+          },
+        },
+
+        select: {
+          id: true,
+          clientName: true,
+          clientEmail: true,
+          description: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+
+          reviewer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+
+        orderBy: {
+          updatedAt: "desc",
         },
       });
 
@@ -104,10 +182,10 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        error: "Invalid user role",
+        error: "Invalid queue",
       },
       {
-        status: 403,
+        status: 400,
       }
     );
   } catch (error) {
@@ -133,10 +211,6 @@ export async function POST(
   try {
     const user = await getCurrentUser();
 
-    // --------------------------------------------------
-    // AUTHENTICATION
-    // --------------------------------------------------
-
     if (!user) {
       return NextResponse.json(
         {
@@ -147,11 +221,6 @@ export async function POST(
         }
       );
     }
-
-    // --------------------------------------------------
-    // AUTHORIZATION
-    // Only patients can create applications
-    // --------------------------------------------------
 
     if (user.role !== "PATIENT") {
       return NextResponse.json(
@@ -164,10 +233,6 @@ export async function POST(
       );
     }
 
-    // --------------------------------------------------
-    // REQUEST BODY
-    // --------------------------------------------------
-
     const body = await request.json();
 
     const {
@@ -179,10 +244,6 @@ export async function POST(
       description,
       notes,
     } = body;
-
-    // --------------------------------------------------
-    // VALIDATION
-    // --------------------------------------------------
 
     if (
       !clientName?.trim() ||
@@ -201,10 +262,6 @@ export async function POST(
         }
       );
     }
-
-    // --------------------------------------------------
-    // CREATE INTAKE + AUDIT EVENT
-    // --------------------------------------------------
 
     const intake = await prisma.$transaction(
       async (tx) => {
@@ -240,16 +297,14 @@ export async function POST(
             },
           });
 
-        // Record every new intake submission
         await tx.auditLog.create({
           data: {
             action: "CREATED",
 
-            details:
-              JSON.stringify({
-                status:
-                  createdIntake.status,
-              }),
+            details: JSON.stringify({
+              status:
+                createdIntake.status,
+            }),
 
             userId:
               user.id,
@@ -262,10 +317,6 @@ export async function POST(
         return createdIntake;
       }
     );
-
-    // --------------------------------------------------
-    // RESPONSE
-    // --------------------------------------------------
 
     return NextResponse.json(
       intake,
@@ -281,8 +332,7 @@ export async function POST(
 
     return NextResponse.json(
       {
-        error:
-          "Unable to submit application",
+        error: "Unable to submit application",
       },
       {
         status: 500,

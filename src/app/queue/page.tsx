@@ -1,13 +1,9 @@
-import {
-  redirect,
-} from "next/navigation";
+import { redirect } from "next/navigation";
 
-import {
-  getCurrentUser,
-} from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 
-import LogoutButton
-  from "@/components/LogoutButton";
+import LogoutButton from "@/components/LogoutButton";
+import ReviewerQueue from "@/components/ReviewerQueue";
 
 export default async function QueuePage() {
   const user =
@@ -24,18 +20,46 @@ export default async function QueuePage() {
   return (
     <main
       style={{
+        maxWidth: "1000px",
+        margin: "0 auto",
         padding: "2rem",
       }}
     >
-      <h1>Review Queue</h1>
+      <header
+        style={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems:
+            "center",
+          marginBottom:
+            "2rem",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              marginBottom:
+                "0.25rem",
+            }}
+          >
+            Review Queue
+          </h1>
 
-      <LogoutButton />
+          <p
+            style={{
+              margin: 0,
+              color: "#666",
+            }}
+          >
+            Welcome, {user.name}
+          </p>
+        </div>
 
-      <p>
-        Welcome, {user.name}
-      </p>
+        <LogoutButton />
+      </header>
 
-      {/* Queue implementation comes later */}
+      <ReviewerQueue />
     </main>
   );
 }
