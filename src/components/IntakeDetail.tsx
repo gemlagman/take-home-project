@@ -39,6 +39,15 @@ interface Intake {
     name: string;
   };
 
+  documents: {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  description: string | null;
+  createdAt: string;
+  }[];
+
   auditLogs: AuditEntry[];
 }
 
@@ -585,6 +594,65 @@ export default function IntakeDetail({
           }
         />
       </section>
+      
+      {/* ----------------------------------------
+        SUPPORTING DOCUMENTS
+      ---------------------------------------- */}
+      <section style={cardStyle}>
+        <h2>
+          Supporting Documents
+        </h2>
+
+        {intake.documents.length === 0 ? (
+          <p>
+            No supporting documents uploaded.
+          </p>
+        ) : (
+          <div>
+            {intake.documents.map(
+              (document) => (
+                <div
+                  key={document.id}
+                  style={{
+                    padding: "0.75rem 0",
+                    borderBottom:
+                      "1px solid #ddd",
+                  }}
+                >
+                  <div>
+                    <strong>
+                      {document.fileName}
+                    </strong>
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#666",
+                      fontSize: "0.9rem",
+                      marginTop: "0.25rem",
+                    }}
+                  >
+                    {formatFileSize(
+                      document.fileSize
+                    )}
+                  </div>
+
+                  {document.description && (
+                    <div
+                      style={{
+                        marginTop: "0.25rem",
+                        color: "#555",
+                      }}
+                    >
+                      {document.description}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </section>
 
       {/* ----------------------------------------
           REVIEW INFORMATION
@@ -815,6 +883,28 @@ function formatDate(
   return new Date(
     date
   ).toLocaleDateString();
+}
+
+function formatFileSize(
+  bytes: number
+) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
+  }
+
+  return `${(
+    bytes /
+    (1024 * 1024)
+  ).toFixed(1)} MB`;
 }
 
 // --------------------------------------------------

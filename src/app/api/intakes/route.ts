@@ -30,7 +30,12 @@ export async function GET(request: Request) {
         },
 
         include: {
-          documents: true,
+          documents: {
+            orderBy: {
+              createdAt:
+                "desc",
+            },
+          },
         },
 
         orderBy: {

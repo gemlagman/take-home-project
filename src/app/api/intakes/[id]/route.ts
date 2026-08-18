@@ -146,6 +146,21 @@ export async function GET(
             },
           },
 
+          documents: {
+            select: {
+              id: true,
+              fileName: true,
+              fileType: true,
+              fileSize: true,
+              description: true,
+              createdAt: true,
+            },
+
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+
           auditLogs: {
             include: {
               user: {

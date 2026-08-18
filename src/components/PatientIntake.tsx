@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import IntakeForm from "@/components/IntakeForm";
+import DocumentUpload from "@/components/DocumentUpload";
 
 interface Intake {
   id: string;
@@ -31,6 +32,9 @@ interface Intake {
     fileName: string;
     fileType: string;
     fileSize: number;
+    filePath: string;
+    description: string | null;
+    createdAt: string;
   }[];
 }
 
@@ -76,6 +80,7 @@ export default function PatientIntake() {
         }
 
         setIntakes(data);
+        return data as Intake[];
       } catch (error) {
         console.error(
           "Failed to load patient intakes:",
@@ -134,6 +139,29 @@ export default function PatientIntake() {
 
     await loadIntakes();
   }
+
+  async function handleDocumentsChanged(
+    intakeId: string
+    ) {
+    const updatedIntakes =
+        await loadIntakes();
+
+    if (!updatedIntakes) {
+        return;
+    }
+
+    const updated =
+        updatedIntakes.find(
+        (item) =>
+            item.id === intakeId
+        );
+
+    if (updated) {
+        setSelectedIntake(
+        updated
+        );
+    }
+    }
 
   if (loading) {
     return (
@@ -208,9 +236,12 @@ export default function PatientIntake() {
       <PatientIntakeDetails
         intake={selectedIntake}
         onBack={() =>
-          setSelectedIntake(null)
+            setSelectedIntake(null)
         }
-      />
+        onDocumentsChanged={
+            handleDocumentsChanged
+        }
+       />
     );
   }
 
@@ -370,9 +401,11 @@ function PatientIntakeCard({
 function PatientIntakeDetails({
   intake,
   onBack,
+  onDocumentsChanged
 }: {
   intake: Intake;
   onBack: () => void;
+  onDocumentsChanged: (intakeId: string) => Promise<void>;
 }) {
   return (
     <section>
@@ -486,33 +519,85 @@ function PatientIntakeDetails({
 
       <section style={cardStyle}>
         <h3>
-          Supporting Documents
+            Supporting Documents
         </h3>
 
-        {intake.documents.length ===
-        0 ? (
-          <p>
-            No supporting documents uploaded.
-          </p>
-        ) : (
-          <ul>
-            {intake.documents.map(
-              (document) => (
-                <li
-                  key={
-                    document.id
-                  }
-                >
-                  {document.fileName}{" "}
-                  ({formatFileSize(
-                    document.fileSize
-                  )})
-                </li>
-              )
-            )}
-          </ul>
+        <p
+            style={{
+            color: "#666",
+            }}
+        >
+            Upload relevant medical
+            records or supporting
+            documentation.
+        </p>
+
+        <DocumentUpload
+            intakeId={
+            intake.id
+            }
+            onUploaded={() =>
+            onDocumentsChanged(
+                intake.id
+            )
+            }
+        />
+
+        {intake.documents.length >
+            0 && (
+            <div
+            style={{
+                marginTop:
+                "2rem",
+            }}
+            >
+            <h4>
+                Uploaded Documents
+            </h4>
+
+            <ul>
+                {intake.documents.map(
+                (document) => (
+                    <li
+                    key={
+                        document.id
+                    }
+                    style={{
+                        marginBottom:
+                        "0.75rem",
+                    }}
+                    >
+                    <strong>
+                        {
+                        document.fileName
+                        }
+                    </strong>
+
+                    {" — "}
+
+                    {formatFileSize(
+                        document.fileSize
+                    )}
+
+                    {document.description && (
+                        <div
+                        style={{
+                            color:
+                            "#666",
+                        }}
+                        >
+                        {
+                            document.description
+                        }
+                        </div>
+                    )}
+                    </li>
+                )
+                )}
+            </ul>
+            </div>
         )}
-      </section>
+        </section>
     </section>
   );
 }
