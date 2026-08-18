@@ -1,25 +1,26 @@
-import styles from "./page.module.css";
-import Link from "next/link";
+import {
+  redirect,
+} from "next/navigation";
 
-export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>Intake Review System</h1>
-        </header>
-        <nav className={styles.nav}>
-          <Link href="/login" className={styles.link}>
-            Sign In
-          </Link>
-          <Link href="/intake" className={styles.link}>
-            Submit Intake
-          </Link>
-          <Link href="/queue" className={styles.link}>
-            Review Queue
-          </Link>
-        </nav>
-      </div>
-    </main>
-  );
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+export default async function Home() {
+  const user =
+    await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (user.role === "PATIENT") {
+    redirect("/intake");
+  }
+
+  if (user.role === "REVIEWER") {
+    redirect("/queue");
+  }
+
+  redirect("/login");
 }

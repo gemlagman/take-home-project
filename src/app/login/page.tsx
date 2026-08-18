@@ -1,8 +1,18 @@
-export default function LoginPage() {
-  return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Sign In</h1>
-      <p>Sign in as a Patient or a Reviewer to continue.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+
+import LoginForm from "@/components/LoginForm";
+import { getCurrentUser } from "@/lib/auth";
+
+export default async function LoginPage() {
+  const user = await getCurrentUser();
+
+  if (user?.role === "PATIENT") {
+    redirect("/intake");
+  }
+
+  if (user?.role === "REVIEWER") {
+    redirect("/queue");
+  }
+
+  return <LoginForm />;
 }
